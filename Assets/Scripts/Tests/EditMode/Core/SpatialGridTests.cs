@@ -83,6 +83,34 @@ namespace MyGame.Tests.Core
             Assert.Less(Vector3.Distance(new Vector3(world.x, 0f, world.z), new Vector3(back.x, 0f, back.z)), 15f);
         }
 
+        [Test]
+        public void UpdateUnitPosition_WhenUnitMovesToNewCell_QueryUsesNewCell()
+        {
+            var unit = CreateUnit(new Vector3(0f, 0f, 0f), "Mover");
+            _spatialGrid.AddUnit(unit);
+
+            unit.Position = new Vector3(50f, 0f, 0f);
+            _spatialGrid.UpdateUnitPosition(unit);
+
+            var atOrigin = _spatialGrid.GetUnitsInRadius(Vector3.zero, 5f);
+            var atNewPos = _spatialGrid.GetUnitsInRadius(new Vector3(50f, 0f, 0f), 5f);
+
+            Assert.IsFalse(atOrigin.Contains(unit));
+            Assert.Contains(unit, atNewPos);
+        }
+
+        [Test]
+        public void ClearAllUnits_RemovesAllRegisteredUnits()
+        {
+            _spatialGrid.AddUnit(CreateUnit(Vector3.zero, "A"));
+            _spatialGrid.AddUnit(CreateUnit(Vector3.one * 5f, "B"));
+
+            _spatialGrid.ClearAllUnits();
+
+            Assert.AreEqual(0, _spatialGrid.GetRegisteredUnitCount());
+            Assert.AreEqual(0, _spatialGrid.GetUnitsInRadius(Vector3.zero, 100f).Count);
+        }
+
         private static TestGridUnit CreateUnit(Vector3 position, string name)
         {
             return new TestGridUnit

@@ -6,6 +6,9 @@ using MyGame.Core;
 using MyGame.Core.SpatialPartitioning;
 using MyGame.RuntimeSystems.Combat;
 using MyGame.RuntimeSystems.Movement;
+using MyGame.Presentation;
+using MyGame.Input;
+using MyGame.Game;
 
 namespace MyGame.Tests.Integration
 {
@@ -39,6 +42,9 @@ namespace MyGame.Tests.Integration
             Assert.IsTrue(DependencyContainer.Instance.IsRegistered<SpatialGrid>());
             Assert.IsTrue(DependencyContainer.Instance.IsRegistered<LightweightFireSystem>());
             Assert.IsTrue(DependencyContainer.Instance.IsRegistered<MovementSystem>());
+            Assert.IsTrue(DependencyContainer.Instance.IsRegistered<SelectionManager>());
+            Assert.IsTrue(DependencyContainer.Instance.IsRegistered<InputHandler>());
+            Assert.IsTrue(DependencyContainer.Instance.IsRegistered<CommandSystem>());
 
             Object.Destroy(host);
         }

@@ -1,10 +1,10 @@
 {
-    "name": "MyGame.Core.Tests",
-    "rootNamespace": "MyGame.Tests.Core",
+    "name": "MyGame.Presentation.Tests",
+    "rootNamespace": "MyGame.Tests.Presentation",
     "references": [
-        "Unity.PerformanceTesting",
         "MyGame.Core",
-        "MyGame.Game"
+        "MyGame.Game",
+        "MyGame.Presentation"
     ],
     "includePlatforms": [
         "Editor"

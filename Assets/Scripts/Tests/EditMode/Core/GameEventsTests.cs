@@ -66,6 +66,18 @@ namespace MyGame.Tests.Core
         }
 
         [Test]
+        public void TriggerUnitCreated_WhenSubscribed_InvokesHandler()
+        {
+            IUnit received = null;
+            GameEvents.OnUnitCreated += unit => received = unit;
+
+            var unit = new TestUnit();
+            GameEvents.TriggerUnitCreated(unit);
+
+            Assert.AreSame(unit, received);
+        }
+
+        [Test]
         public void ClearAllEvents_WhenCalled_RemovesAllSubscribers()
         {
             var invoked = false;

@@ -1,8 +1,7 @@
 {
-    "name": "MyGame.Core.Tests",
-    "rootNamespace": "MyGame.Tests.Core",
+    "name": "MyGame.Game.Tests",
+    "rootNamespace": "MyGame.Tests.Game",
     "references": [
-        "Unity.PerformanceTesting",
         "MyGame.Core",
         "MyGame.Game"
     ],

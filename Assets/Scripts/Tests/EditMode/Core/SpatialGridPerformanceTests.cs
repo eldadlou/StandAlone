@@ -49,6 +49,25 @@ namespace MyGame.Tests.Core
                 .Run();
         }
 
+        [Test, Performance]
+        [Category("Performance")]
+        public void GetUnitsInRadiusNonAlloc_With100Units_MedianUnder2Ms()
+        {
+            const int unitCount = 100;
+            for (var i = 0; i < unitCount; i++)
+                _spatialGrid.AddUnit(new PerfUnit(new Vector3(i * 2f, 0f, 0f)));
+
+            var buffer = new System.Collections.Generic.List<IUnit>();
+
+            Measure.Method(() =>
+                {
+                    _spatialGrid.GetUnitsInRadiusNonAlloc(Vector3.zero, 50f, buffer);
+                })
+                .WarmupCount(5)
+                .MeasurementCount(20)
+                .Run();
+        }
+
         private sealed class PerfUnit : IUnit
         {
             public PerfUnit(Vector3 position) => Position = position;

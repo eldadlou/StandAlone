@@ -4,7 +4,6 @@ using System.Linq;
 using MyGame.Core;
 using MyGame.Core.Units;
 using MyGame.Core.Units.Combat;
-using MyGame.Game;
 
 namespace MyGame.RuntimeSystems.Combat
 {
@@ -51,30 +50,9 @@ namespace MyGame.RuntimeSystems.Combat
         
         private void FindCombatUnits()
         {
-            // Only find units once at startup, not every frame
-            // Use dependency injection to get units from the registry
-            var unitRegistry = MyGame.Core.SystemInitializer.GetSystem<MyGame.Core.Units.Unit>();
-            if (unitRegistry != null)
-            {
-                // Get all units and check if they implement ICombatUnit
-                Unit[] allUnits = FindObjectsOfType<Unit>();
-                foreach (var unit in allUnits)
-                {
-                    if (unit is ICombatUnit combatUnit)
-                    {
-                        RegisterCombatUnit(combatUnit);
-                    }
-                }
-            }
-            else
-            {
-                // Fallback to FindObjectsOfType if registry not available
-                ICombatUnit[] combatUnits = FindObjectsOfType<MonoBehaviour>().OfType<ICombatUnit>().ToArray();
-                foreach (var combatUnit in combatUnits)
-                {
-                    RegisterCombatUnit(combatUnit);
-                }
-            }
+            var combatUnits = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None).OfType<ICombatUnit>();
+            foreach (var combatUnit in combatUnits)
+                RegisterCombatUnit(combatUnit);
         }
         
         public void RegisterCombatUnit(ICombatUnit combatUnit)

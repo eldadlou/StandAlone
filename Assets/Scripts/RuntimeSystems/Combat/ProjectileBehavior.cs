@@ -1,8 +1,8 @@
 using UnityEngine;
 using MyGame.Core;
+using MyGame.Core.Interfaces;
 using MyGame.Core.Units;
 using MyGame.Core.Units.Combat;
-using MyGame.Game;
 
 namespace MyGame.RuntimeSystems.Combat
 {
@@ -131,7 +131,7 @@ namespace MyGame.RuntimeSystems.Combat
                 }
                 
                 // Notify LightweightFireSystem using dependency injection
-                var fireCoordinator = SystemInitializer.GetSystem<ICombatFireCoordinator>();
+                var fireCoordinator = DependencyContainer.Instance.TryResolve<ICombatFireCoordinator>();
                 if (fireCoordinator != null)
                     fireCoordinator.OnProjectileHit(target, transform.position, attacker);
                 else
@@ -187,14 +187,9 @@ namespace MyGame.RuntimeSystems.Combat
                 {
                     damageable.TakeDamage(actualDamage);
                 }
-                else
+                else if (target is IAttackable attackable)
                 {
-                    // Fallback: try to find a Unit component
-                    Unit unit = target as Unit;
-                    if (unit != null)
-                    {
-                        unit.TakeDamage(actualDamage);
-                    }
+                    attackable.TakeDamage(actualDamage);
                 }
                 
                 // Notify AlliedSupportSystem to alert nearby friendly units
@@ -216,14 +211,9 @@ namespace MyGame.RuntimeSystems.Combat
             {
                 damageable.TakeDamage(damage);
             }
-            else
+            else if (target is IAttackable attackable)
             {
-                // Fallback: try to find a Unit component
-                Unit unit = target as Unit;
-                if (unit != null)
-                {
-                    unit.TakeDamage(damage);
-                }
+                attackable.TakeDamage(damage);
             }
             
             // Notify AlliedSupportSystem to alert nearby friendly units
@@ -239,7 +229,7 @@ namespace MyGame.RuntimeSystems.Combat
             if (target == null || attacker == null) return;
             
             // Get AlliedSupportSystem using dependency injection
-            var support = SystemInitializer.GetSystem<IAlliedCombatSupport>();
+            var support = DependencyContainer.Instance.TryResolve<IAlliedCombatSupport>();
             support?.NotifyUnitAttacked(target, attacker, damageDealt);
         }
         

@@ -18,6 +18,9 @@ namespace MyGame.Core
 
         public ObjectPool(T prefab, Transform parent = null, int initialSize = 10, int maxSize = 100)
         {
+            if (prefab == null)
+                throw new ArgumentNullException(nameof(prefab), "ObjectPool cannot prewarm: prefab reference is null.");
+
             _prefab = prefab;
             _parent = parent;
             _initialSize = initialSize;

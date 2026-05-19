@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using MyGame.Core;
 using MyGame.Core.Services;
-using UnityEngine;
 using MyGame.Core.Units;
 using MyGame.Core.Events;
+using UnityEngine;
 
 namespace MyGame.Presentation
 {
     public class SelectionManager : MonoBehaviour
     {
-        public List<Unit> SelectedUnits { get; private set; } = new List<Unit>();
+        public List<ISelectableUnit> SelectedUnits { get; private set; } = new List<ISelectableUnit>();
 
         private void Awake()
         {
@@ -18,10 +18,10 @@ namespace MyGame.Presentation
         }
 
         // Select a single unit (deselects others)
-        public void SelectUnit(Unit unit)
+        public void SelectUnit(ISelectableUnit unit)
         {
             DeselectAll();
-            if (unit != null)
+            if (unit != null && CanSelect(unit))
             {
                 SelectedUnits.Add(unit);
                 unit.SetSelected(true);
@@ -36,12 +36,12 @@ namespace MyGame.Presentation
 
 
         // Select multiple units (deselects others)
-        public void SelectUnits(List<Unit> units)
+        public void SelectUnits(List<ISelectableUnit> units)
         {
             DeselectAll();
             foreach (var unit in units)
             {
-                if (unit != null && !SelectedUnits.Contains(unit))
+                if (unit != null && CanSelect(unit) && !SelectedUnits.Contains(unit))
                 {
                     SelectedUnits.Add(unit);
                     unit.SetSelected(true);
@@ -50,9 +50,9 @@ namespace MyGame.Presentation
         }
 
         // Add a unit to the current selection
-        public void AddToSelection(Unit unit)
+        public void AddToSelection(ISelectableUnit unit)
         {
-            if (unit != null && !SelectedUnits.Contains(unit))
+            if (unit != null && CanSelect(unit) && !SelectedUnits.Contains(unit))
             {
                 SelectedUnits.Add(unit);
                 unit.SetSelected(true);
@@ -60,7 +60,7 @@ namespace MyGame.Presentation
         }
 
         // Remove a unit from the current selection
-        public void RemoveFromSelection(Unit unit)
+        public void RemoveFromSelection(ISelectableUnit unit)
         {
             if (unit != null && SelectedUnits.Contains(unit))
             {
@@ -85,15 +85,20 @@ namespace MyGame.Presentation
         }
 
         // Toggle selection state of a unit
-        public void ToggleSelection(Unit unit)// TODO: connected to nothing
+        public void ToggleSelection(ISelectableUnit unit)// TODO: connected to nothing
         {
-            if (unit != null)
+            if (unit != null && CanSelect(unit))
             {
                 if (SelectedUnits.Contains(unit))
                     RemoveFromSelection(unit);
                 else
                     AddToSelection(unit);
             }
+        }
+
+        private static bool CanSelect(ISelectableUnit unit)
+        {
+            return unit is IUnit u && SelectionUtility.IsPlayerSelectable(u);
         }
     }
 }

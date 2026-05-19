@@ -24,12 +24,12 @@ namespace MyGame.RuntimeSystems.Combat
     }
 
     /// <summary>
-    /// Centralized target acquisition for <see cref="CombatUnit"/> instances.
+    /// Centralized target acquisition for <see cref="ICombatUnit"/> instances.
     /// </summary>
     public interface ICentralizedCombatDetection
     {
-        void RegisterCombatUnit(CombatUnit combatUnit);
-        void UnregisterCombatUnit(CombatUnit combatUnit);
-        IUnit GetCurrentTarget(CombatUnit combatUnit);
+        void RegisterCombatUnit(ICombatUnit combatUnit);
+        void UnregisterCombatUnit(ICombatUnit combatUnit);
+        IUnit GetCurrentTarget(ICombatUnit combatUnit);
     }
 }

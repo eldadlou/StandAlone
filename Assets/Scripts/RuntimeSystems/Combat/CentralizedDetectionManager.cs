@@ -23,14 +23,14 @@ namespace MyGame.RuntimeSystems.Combat
         
         // Core systems
         private SpatialGrid spatialGrid;
-        private List<CombatUnit> registeredCombatUnits = new List<CombatUnit>();
-        private Dictionary<CombatUnit, IUnit> currentTargets = new Dictionary<CombatUnit, IUnit>();
-        private Dictionary<CombatUnit, float> lastTargetUpdateTimes = new Dictionary<CombatUnit, float>();
+        private List<ICombatUnit> registeredCombatUnits = new List<ICombatUnit>();
+        private Dictionary<ICombatUnit, IUnit> currentTargets = new Dictionary<ICombatUnit, IUnit>();
+        private Dictionary<ICombatUnit, float> lastTargetUpdateTimes = new Dictionary<ICombatUnit, float>();
         
         // Performance optimization
         private float lastDetectionUpdateTime;
         private int currentBatchIndex = 0;
-        private List<CombatUnit> unitsToProcess = new List<CombatUnit>();
+        private List<ICombatUnit> unitsToProcess = new List<ICombatUnit>();
         
         // GC OPTIMIZATION: Pre-allocated collections to avoid garbage every frame
         private List<IUnit> _reusableEnemyList = new List<IUnit>(32); // Reused for enemy detection
@@ -70,7 +70,7 @@ namespace MyGame.RuntimeSystems.Combat
         /// <summary>
         /// Register a combat unit for centralized detection
         /// </summary>
-        public void RegisterCombatUnit(CombatUnit combatUnit)
+        public void RegisterCombatUnit(ICombatUnit combatUnit)
         {
             if (combatUnit == null || registeredCombatUnits.Contains(combatUnit)) return;
             
@@ -89,7 +89,7 @@ namespace MyGame.RuntimeSystems.Combat
         /// <summary>
         /// Unregister a combat unit
         /// </summary>
-        public void UnregisterCombatUnit(CombatUnit combatUnit)
+        public void UnregisterCombatUnit(ICombatUnit combatUnit)
         {
             if (combatUnit == null) return;
             
@@ -104,7 +104,7 @@ namespace MyGame.RuntimeSystems.Combat
         /// <summary>
         /// Get current target for a combat unit
         /// </summary>
-        public IUnit GetCurrentTarget(CombatUnit combatUnit)
+        public IUnit GetCurrentTarget(ICombatUnit combatUnit)
         {
             return currentTargets.TryGetValue(combatUnit, out IUnit target) ? target : null;
         }
@@ -159,7 +159,7 @@ namespace MyGame.RuntimeSystems.Combat
         /// Update detection for a single unit
         /// PERFORMANCE OPTIMIZED: Uses sqrMagnitude, skips search when target is valid
         /// </summary>
-        private void UpdateUnitDetection(CombatUnit combatUnit)
+        private void UpdateUnitDetection(ICombatUnit combatUnit)
         {
             if (combatUnit == null) return;
             
@@ -205,7 +205,7 @@ namespace MyGame.RuntimeSystems.Combat
         /// Find the best target for a combat unit - FAST VERSION
         /// Uses pre-calculated squared radius and position for efficiency
         /// </summary>
-        private IUnit FindBestTargetFast(CombatUnit combatUnit, Vector3 unitPos, float detectionRadiusSqr)
+        private IUnit FindBestTargetFast(ICombatUnit combatUnit, Vector3 unitPos, float detectionRadiusSqr)
         {
             if (combatUnit == null) return null;
             
@@ -236,7 +236,7 @@ namespace MyGame.RuntimeSystems.Combat
         /// Optimized method to get enemies in range
         /// GC OPTIMIZED: Reuses pre-allocated collections to avoid garbage
         /// </summary>
-        private List<IUnit> GetEnemiesInRangeOptimized(CombatUnit combatUnit)
+        private List<IUnit> GetEnemiesInRangeOptimized(ICombatUnit combatUnit)
         {
             // Clear and reuse the enemy list - NO NEW ALLOCATIONS
             _reusableEnemyList.Clear();
@@ -252,7 +252,7 @@ namespace MyGame.RuntimeSystems.Combat
                     if (unit == null) continue;
                     
                     // CRITICAL FIX: Check if this is the same unit by comparing positions
-                    // We can't use unit != combatUnit because IUnit (Unit component) and CombatUnit
+                    // We can't use unit != combatUnit because IUnit (Unit component) and ICombatUnit
                     // are different components on the same GameObject - object reference won't match
                     if (!IsSameUnit(combatUnit, unit) && IsEnemy(combatUnit, unit))
                     {
@@ -287,20 +287,22 @@ namespace MyGame.RuntimeSystems.Combat
         }
         
         /// <summary>
-        /// Check if an IUnit is the same unit as a CombatUnit
+        /// Check if an IUnit is the same unit as a ICombatUnit
         /// OPTIMIZED: Simple gameObject comparison
         /// </summary>
-        private bool IsSameUnit(CombatUnit combatUnit, IUnit unit)
+        private bool IsSameUnit(ICombatUnit combatUnit, IUnit unit)
         {
             // Fast path: compare gameObjects directly
-            // Both CombatUnit and IUnit (Unit) are MonoBehaviours on the same GameObject
-            return unit is MonoBehaviour mb && mb.gameObject == combatUnit.gameObject;
+            // Both ICombatUnit and IUnit (Unit) are MonoBehaviours on the same GameObject
+            return unit is MonoBehaviour mb
+                && combatUnit is MonoBehaviour combatMb
+                && mb.gameObject == combatMb.gameObject;
         }
         
         /// <summary>
         /// Check if a unit is an enemy - OPTIMIZED inline checks
         /// </summary>
-        private bool IsEnemy(CombatUnit combatUnit, IUnit otherUnit)
+        private bool IsEnemy(ICombatUnit combatUnit, IUnit otherUnit)
         {
             // Combined null and health check
             if (otherUnit == null || otherUnit.Health <= 0) return false;
@@ -314,7 +316,7 @@ namespace MyGame.RuntimeSystems.Combat
         /// <summary>
         /// Set target for a combat unit
         /// </summary>
-        private void SetTarget(CombatUnit combatUnit, IUnit target)
+        private void SetTarget(ICombatUnit combatUnit, IUnit target)
         {
             if (combatUnit == null || target == null) return;
             
@@ -330,7 +332,7 @@ namespace MyGame.RuntimeSystems.Combat
         /// <summary>
         /// Clear target for a combat unit
         /// </summary>
-        private void ClearTarget(CombatUnit combatUnit)
+        private void ClearTarget(ICombatUnit combatUnit)
         {
             if (combatUnit == null) return;
             

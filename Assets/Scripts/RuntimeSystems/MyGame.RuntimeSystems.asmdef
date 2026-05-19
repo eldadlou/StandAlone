@@ -1,0 +1,17 @@
+{
+    "name": "MyGame.RuntimeSystems",
+    "rootNamespace": "MyGame.RuntimeSystems",
+    "references": [
+        "MyGame.Core",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

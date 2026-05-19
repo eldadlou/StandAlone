@@ -269,8 +269,7 @@ namespace MyGame.RuntimeSystems.Combat
         /// <param name="responderIndex">Index of this responder (used for positioning)</param>
         private bool TryAlertUnit(IUnit ally, IUnit victim, IUnit attacker, int responderIndex)
         {
-            // Get the CombatUnit component for this ally
-            CombatUnit allyCombat = GetCombatUnit(ally);
+            var allyCombat = GetCombatUnit(ally);
             if (allyCombat == null) return false;
             
             // Check if this responder is on cooldown (recently responded to another call)
@@ -432,16 +431,16 @@ namespace MyGame.RuntimeSystems.Combat
         }
         
         /// <summary>
-        /// Get the CombatUnit component for an IUnit
+        /// Get the <see cref="ICombatUnit"/> component for an <see cref="IUnit"/>.
         /// </summary>
-        private CombatUnit GetCombatUnit(IUnit unit)
+        private ICombatUnit GetCombatUnit(IUnit unit)
         {
-            if (unit is CombatUnit combatUnit)
+            if (unit is ICombatUnit combatUnit)
                 return combatUnit;
-            
+
             if (unit is MonoBehaviour mono)
-                return mono.GetComponent<CombatUnit>();
-            
+                return mono.GetComponent<ICombatUnit>();
+
             return null;
         }
         

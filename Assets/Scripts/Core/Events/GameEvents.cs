@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using MyGame.Core.Units;
-using MyGame.Game;
+using Team = MyGame.Core.Team;
 
 namespace MyGame.Core.Events
 {

@@ -18,26 +18,42 @@ namespace MyGame.Core.SpatialPartitioning
         
         // Unity's built-in Grid component
         private Grid _unityGrid;
-        
+        private bool _initialized;
+        private bool _registeredWithContainer;
+
         // Unit tracking using Unity's Grid coordinates
         private Dictionary<Vector3Int, List<IUnit>> _gridCells = new Dictionary<Vector3Int, List<IUnit>>();
         private Dictionary<IUnit, Vector3Int> _unitPositions = new Dictionary<IUnit, Vector3Int>();
 
         public float CellSize => cellSize;
 
-        private void Awake()
+        private void Awake() => EnsureInitialized();
+
+        /// <summary>
+        /// Idempotent setup for Grid + DI. Safe when Awake does not run (e.g. Edit Mode tests).
+        /// </summary>
+        private void EnsureInitialized()
         {
-            // Create Unity Grid component
-            _unityGrid = gameObject.AddComponent<Grid>();
+            if (_initialized)
+                return;
+
+            _unityGrid = GetComponent<Grid>();
+            if (_unityGrid == null)
+                _unityGrid = gameObject.AddComponent<Grid>();
+
             _unityGrid.cellSize = new Vector3(cellSize, 1f, cellSize);
             _unityGrid.cellGap = Vector3.zero;
-            _unityGrid.cellSwizzle = GridLayout.CellSwizzle.XZY; // Use XZY for 2D top-down view
-            
-            var container = DependencyContainer.Instance;
-            container.Register(this);
-            container.RegisterAs<ISpatialUnitQuery>(this);
-            
-            // Debug.Log($"SpatialGrid initialized with Unity Grid - Cell Size: {cellSize}");
+            _unityGrid.cellSwizzle = GridLayout.CellSwizzle.XZY;
+
+            if (!_registeredWithContainer)
+            {
+                var container = DependencyContainer.Instance;
+                container.Register(this);
+                container.RegisterAs<ISpatialUnitQuery>(this);
+                _registeredWithContainer = true;
+            }
+
+            _initialized = true;
         }
         
         private void Start()
@@ -127,6 +143,8 @@ namespace MyGame.Core.SpatialPartitioning
                 return;
             }
 
+            EnsureInitialized();
+
             // Use 2D grid coordinates (ignore Y for flat terrain)
             var worldPos = unit.Position;
             var flatPos = new Vector3(worldPos.x, 0, worldPos.z); // Set Y to 0 for flat terrain
@@ -164,6 +182,8 @@ namespace MyGame.Core.SpatialPartitioning
         {
             if (unit == null) return;
 
+            EnsureInitialized();
+
             // Use 2D grid coordinates (ignore Y for flat terrain)
             var worldPos = unit.Position;
             var flatPos = new Vector3(worldPos.x, 0, worldPos.z); // Set Y to 0 for flat terrain
@@ -193,6 +213,8 @@ namespace MyGame.Core.SpatialPartitioning
         /// </summary>
         public List<IUnit> GetUnitsInRadius(Vector3 position, float radius)
         {
+            EnsureInitialized();
+
             var units = new List<IUnit>();
             
             // Use 2D grid coordinates (ignore Y for flat terrain)
@@ -240,6 +262,8 @@ namespace MyGame.Core.SpatialPartitioning
         /// </summary>
         public void GetUnitsInRadiusNonAlloc(Vector3 position, float radius, List<IUnit> resultList)
         {
+            EnsureInitialized();
+
             resultList.Clear();
             
             // Use 2D grid coordinates (ignore Y for flat terrain)
@@ -284,6 +308,7 @@ namespace MyGame.Core.SpatialPartitioning
         /// </summary>
         public Vector3Int WorldToGrid(Vector3 worldPosition)
         {
+            EnsureInitialized();
             return _unityGrid.WorldToCell(worldPosition);
         }
 
@@ -292,6 +317,7 @@ namespace MyGame.Core.SpatialPartitioning
         /// </summary>
         public Vector3 GridToWorld(Vector3Int gridPosition)
         {
+            EnsureInitialized();
             return _unityGrid.CellToWorld(gridPosition);
         }
 
@@ -300,6 +326,7 @@ namespace MyGame.Core.SpatialPartitioning
         /// </summary>
         public Vector3 WorldToLocal(Vector3 worldPosition)
         {
+            EnsureInitialized();
             return _unityGrid.WorldToLocal(worldPosition);
         }
 
@@ -346,6 +373,8 @@ namespace MyGame.Core.SpatialPartitioning
         /// </summary>
         public List<IUnit> GetUnitsInArea(Vector3 center, Vector2 size)
         {
+            EnsureInitialized();
+
             var units = new List<IUnit>();
             // Use 2D grid coordinates (ignore Y for flat terrain)
             var flatCenter = new Vector3(center.x, 0, center.z); // Set Y to 0 for flat terrain
@@ -446,10 +475,8 @@ namespace MyGame.Core.SpatialPartitioning
         public void SetCellSize(float newCellSize)
         {
             cellSize = newCellSize;
-            if (_unityGrid != null)
-            {
-                _unityGrid.cellSize = new Vector3(cellSize, 1f, cellSize);
-            }
+            EnsureInitialized();
+            _unityGrid.cellSize = new Vector3(cellSize, 1f, cellSize);
         }
 
         /// <summary>

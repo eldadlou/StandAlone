@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using MyGame.Core.Units;
 using MyGame.Core;
-using MyGame.Game;
+using MyGame.Core.Services;
 using MyGame.Input;
 using MyGame.Core.Events;
 
@@ -21,9 +21,9 @@ namespace MyGame.Presentation
         [SerializeField] private Image selectionImage;
         
         [Header("Selection Settings")]
-        [SerializeField] private float longPressThreshold = 0.05f; // seconds - reduced for more responsive selection
-        [SerializeField] private float dragThreshold = 5f; // pixels - minimum drag distance to start rectangle selection
-        [SerializeField] private float minSelectionSize = 10f; // pixels
+        [SerializeField] private float longPressThreshold = 0.15f;
+        [SerializeField] private float dragThreshold = 12f;
+        [SerializeField] private float minSelectionSize = 12f;
         [SerializeField] private Color selectionColor = new Color(0.2f, 0.6f, 1f, 0.3f);
         [SerializeField] private Color borderColor = new Color(0.2f, 0.6f, 1f, 0.8f);
         
@@ -168,10 +168,10 @@ namespace MyGame.Presentation
         private void Update()
         {
             // If selection is active but mouse button is no longer pressed, end selection
-            if (isSelecting && !Mouse.current.leftButton.isPressed)
+            if (isSelecting && Mouse.current != null && !Mouse.current.leftButton.isPressed)
             {
-                EndSelection();
-                return; // EndSelection resets state; no further processing needed this frame
+                EndSelection(Mouse.current.position.ReadValue());
+                return;
             }
 
             // Handle continuous mouse tracking for rectangle selection
@@ -245,7 +245,7 @@ namespace MyGame.Presentation
 
         private void HandleSelectionEnd(Vector2 screenPosition)
         {
-            EndSelection();
+            EndSelection(screenPosition);
         }
 
         private void HandleSelectionClear()
@@ -253,50 +253,54 @@ namespace MyGame.Presentation
             ForceEndSelection();
         }
 
-        public void EndSelection()
+        public void EndSelection(Vector2? releaseScreenPosition = null)
         {
             if (showDebugInfo)
                 Debug.Log($"EndSelection called - isLongPress: {isLongPress}, isSelecting: {isSelecting}");
-            
-            if (isLongPress)
-            {
-                // Perform multiple selection
-                SelectUnitsInRectangle();
-            }
+
+            var screenRect = GetSelectionScreenRect();
+            var isDragSelection = isLongPress
+                && (screenRect.width >= minSelectionSize || screenRect.height >= minSelectionSize);
+
+            if (isDragSelection)
+                SelectUnitsInRectangle(screenRect);
             else
-            {
-                // Single unit selection - get the unit from InputHandler's cached candidate
-                var inputHandler = DependencyContainer.Instance.TryResolve<MyGame.Input.InputHandler>();
-                if (inputHandler != null && inputHandler.CandidateUnit != null)
-                {
-                    var selectionManager = DependencyContainer.Instance.TryResolve<MyGame.Presentation.SelectionManager>();
-                    if (selectionManager != null)
-                    {
-                        selectionManager.SelectUnit(inputHandler.CandidateUnit);
-                        if (showDebugInfo)
-                            Debug.Log($"Single click - selected unit: {inputHandler.CandidateUnit.name}");
-                    }
-                }
-                else
-                {
-                    // Clicked on empty ground - deselect all units
-                    var selectionManager = DependencyContainer.Instance.TryResolve<MyGame.Presentation.SelectionManager>();
-                    if (selectionManager != null)
-                    {
-                        selectionManager.DeselectAll();
-                        if (showDebugInfo)
-                            Debug.Log("Single click on empty ground - deselected all units");
-                    }
-                }
-            }
-            
-            // Reset state
+                TrySelectSingle(releaseScreenPosition ?? currentPosition);
+
             isSelecting = false;
             isLongPress = false;
             SetSelectionRectVisible(false);
-            
+
             if (showDebugInfo)
                 Debug.Log("Selection state reset");
+        }
+
+        private void TrySelectSingle(Vector2 screenPosition)
+        {
+            selectionManager ??= DependencyContainer.Instance.TryResolve<SelectionManager>();
+            if (selectionManager == null)
+                return;
+
+            var inputHandler = DependencyContainer.Instance.TryResolve<MyGame.Input.InputHandler>();
+            if (inputHandler?.CandidateUnit != null)
+            {
+                selectionManager.SelectUnit(inputHandler.CandidateUnit);
+                if (showDebugInfo)
+                    Debug.Log($"Single click - selected unit: {inputHandler.CandidateUnit.Name}");
+                return;
+            }
+
+            if (SelectionUtility.TryGetSelectableAtScreen(screenPosition, out var selectable))
+            {
+                selectionManager.SelectUnit(selectable);
+                if (showDebugInfo)
+                    Debug.Log($"Single click (raycast) - selected unit: {selectable.Name}");
+                return;
+            }
+
+            selectionManager.DeselectAll();
+            if (showDebugInfo)
+                Debug.Log("Single click on empty ground - deselected all units");
         }
 
         private void UpdateSelectionRect()
@@ -327,73 +331,39 @@ namespace MyGame.Presentation
                 Debug.Log($"Selection rect: {x}, {y}, {width}x{height}");
         }
 
-        private void SelectUnitsInRectangle()
+        private void SelectUnitsInRectangle(Rect screenRect)
         {
+            selectionManager ??= DependencyContainer.Instance.TryResolve<SelectionManager>();
+            mainCamera ??= Camera.main;
+
             if (selectionManager == null)
             {
                 Debug.LogWarning("SelectionManager is null in SelectUnitsInRectangle");
                 return;
             }
-            
+
             if (mainCamera == null)
             {
                 Debug.LogWarning("MainCamera is null in SelectUnitsInRectangle");
                 return;
             }
-            
-            // Get rectangle bounds in screen space
-            Rect screenRect = GetSelectionScreenRect();
-            
+
             if (showDebugInfo)
-                Debug.Log($"SelectUnitsInRectangle - screenRect: {screenRect}, minSize: {minSelectionSize}");
-            
-            // Distance check disabled - allow selection from any distance
-            // if (screenRect.width < minSelectionSize || screenRect.height < minSelectionSize)
-            // {
-            //     if (showDebugInfo)
-            //         Debug.Log("Selection too small, ignoring");
-            //     return;
-            // }
-            
-            // Get units via event system (decoupled approach)
-            List<IUnit> allUnits = GameEvents.GetAllUnits();
-            
-            if (showDebugInfo)
-                Debug.Log($"Event system returned {allUnits.Count} units total");
-            
-            // Use event-driven unit list (much more efficient)
-            List<Unit> selectedUnits = new List<Unit>();
-            
-            foreach (var unit in allUnits)
-            {
-                if (unit is Unit concreteUnit)
-                {
-                    bool inRect = IsUnitInSelectionRect(concreteUnit, screenRect);
-                    if (showDebugInfo)
-                        Debug.Log($"Unit {concreteUnit.name} in rect: {inRect}");
-                    
-                    if (inRect)
-                    {
-                        selectedUnits.Add(concreteUnit);
-                    }
-                }
-            }
-            
-            // Apply selection
+                Debug.Log($"SelectUnitsInRectangle - screenRect: {screenRect}");
+
+            var selectedUnits = SelectionUtility.GetUnitsInScreenRect(screenRect, mainCamera);
+
             if (selectedUnits.Count > 0)
             {
                 selectionManager.SelectUnits(selectedUnits);
-                
                 if (showDebugInfo)
-                    Debug.Log($"Selected {selectedUnits.Count} units in rectangle (event-driven)");
+                    Debug.Log($"Selected {selectedUnits.Count} player units in rectangle");
             }
             else
             {
-                // If no units selected, deselect all
                 selectionManager.DeselectAll();
-                
                 if (showDebugInfo)
-                    Debug.Log("No units in selection rectangle - deselecting all");
+                    Debug.Log("No player units in selection rectangle - deselecting all");
             }
         }
 
@@ -405,39 +375,6 @@ namespace MyGame.Presentation
             float height = Mathf.Abs(currentPosition.y - startPosition.y);
             
             return new Rect(x, y, width, height);
-        }
-
-        private bool IsUnitInSelectionRect(Unit unit, Rect screenRect)
-        {
-            if (unit == null) return false;
-            
-            // Check if camera is valid
-            if (mainCamera == null)
-            {
-                Debug.LogError("MainCamera is null in IsUnitInSelectionRect!");
-                return false;
-            }
-            
-            // Convert unit world position to screen position
-            Vector3 unitScreenPos = mainCamera.WorldToScreenPoint(unit.transform.position);
-            
-            if (showDebugInfo)
-                Debug.Log($"Unit {unit.name} - world pos: {unit.transform.position}, screen pos: {unitScreenPos}");
-            
-            // Check if unit is in front of camera
-            if (unitScreenPos.z < 0) 
-            {
-                if (showDebugInfo)
-                    Debug.Log($"Unit {unit.name} is behind camera (z: {unitScreenPos.z})");
-                return false;
-            }
-            
-            // Check if unit is within selection rectangle
-            bool inRect = screenRect.Contains(unitScreenPos);
-            if (showDebugInfo)
-                Debug.Log($"Unit {unit.name} in rect {screenRect}: {inRect}");
-            
-            return inRect;
         }
 
         private void SetSelectionRectVisible(bool visible)

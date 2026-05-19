@@ -1,0 +1,19 @@
+{
+    "name": "MyGame.Presentation",
+    "rootNamespace": "MyGame.Presentation",
+    "references": [
+        "Unity.Cinemachine",
+        "Unity.InputSystem",
+        "MyGame.Core",
+        "MyGame.RuntimeSystems"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
